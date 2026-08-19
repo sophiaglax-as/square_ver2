@@ -1,4 +1,4 @@
-const SERVICE_URL = 'https://script.google.com/macros/s/AKfycbyuNZo4UpOeO4VmOmUbzxfa_LabGynSGtyMNqXA_Kbcxb-VSW2lYiEXZce8rTAWM9Qu/exec';
+const SERVICE_URL = 'https://script.google.com/macros/s/AKfycbw_CXo24xzx13dB8Dq9FbijPiz2CPxGtYZt3Y-w4VB-PBTXscG2yf5yHnWWVKQoGl9C/exec';
 
 const CATEGORIES = [
   '右キャッチ','右パス','左キャッチ','左パス',
@@ -393,20 +393,56 @@ function renderMistakeSummary(summary){
 }
 
 function renderSuccessTop(rows){
-  const el=$('successTopList');
+  const table=$('successSummaryTable');
 
   if(!rows.length){
-    el.innerHTML='<div class="empty">記録なし</div>';
+    table.innerHTML='<tbody><tr><td class="empty">記録なし</td></tr></tbody>';
     return;
   }
 
-  el.innerHTML=rows.slice(0,10).map((r,i)=>`
-    <div class="topItem">
-      <span>トップ${i+1}</span>
-      <span class="topTeam">${esc(r.team||'-')}</span>
-      <span class="topValue">${r.successCount}回</span>
-    </div>
-  `).join('');
+  // GAS側でチームごとの最高記録だけ返すが、
+  // 念のためフロント側でも同一チームは最大値にまとめる。
+  const bestByTeam={};
+
+  rows.forEach(r=>{
+    const team=String(r.team||'').trim();
+    const count=Number(r.successCount||0);
+
+    if(!team||count<=0)return;
+
+    if(
+      !bestByTeam[team] ||
+      count>bestByTeam[team].successCount
+    ){
+      bestByTeam[team]={
+        team,
+        successCount:count
+      };
+    }
+  });
+
+  const teamOrder=['トップ①','トップ②','サブ①','サブ②'];
+
+  const bestRows=teamOrder
+    .filter(team=>bestByTeam[team])
+    .map(team=>bestByTeam[team]);
+
+  table.innerHTML=`
+    <thead>
+      <tr>
+        <th class="left">チーム</th>
+        <th>最高連続成功回数</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${bestRows.map(r=>`
+        <tr>
+          <td class="left">${esc(r.team)}</td>
+          <td><strong>${r.successCount}回</strong></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  `;
 }
 
 function renderRawMistakes(rows){
@@ -414,10 +450,20 @@ function renderRawMistakes(rows){
 
   el.innerHTML=rows.length?rows.map(r=>`
     <label class="rawItem">
-      <input type="checkbox" data-mistake-id="${esc(r.recordId)}">
+      <input
+        type="checkbox"
+        data-mistake-id="${esc(r.recordId)}"
+      >
       <div>
-        <strong>${esc(r.playerName)} / ${esc(r.category)}</strong>
-        <div class="sub">${esc(formatTime(r.timestamp))}</div>
+        <strong>
+          選手：${esc(r.playerName||'不明')}
+        </strong>
+        <div class="sub" style="margin-top:4px">
+          ミス：${esc(r.category||'不明')}
+        </div>
+        <div class="sub">
+          時刻：${esc(formatTime(r.timestamp))}
+        </div>
       </div>
     </label>
   `).join(''):'<div class="empty">ミス入力なし</div>';
