@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f44">
-<title>スクエア集計アプリ</title>
+<title>スクエア集計</title>
 <style>
 :root{--navy:#0b1f44;--yellow:#ffd54a;--bg:#f3f6fb;--line:#d7deea;--text:#14213d;--muted:#667085;--danger:#c62828;--ok:#167c3a}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -52,7 +52,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 <body>
 <div class="app">
 <header class="hero">
-  <div><h1>スクエア集計アプリ</h1><p>スタッフ用・高速入力</p></div>
+  <div><h1>スクエア集計</h1></div>
   <button id="btnSettings" class="gear">⚙️</button>
 </header>
 <div id="msg" class="msg"></div>
@@ -61,7 +61,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 <nav class="tabs">
   <button class="tab active" data-tab="assignment">👥 今日の担当</button>
   <button class="tab" data-tab="input">✏️ 入力</button>
-  <button class="tab" data-tab="report">📊 閲覧</button>
+  <button class="tab" data-tab="report">📊 結果</button>
 </nav>
 
 <section id="panelAssignment" class="panel active">
@@ -72,7 +72,6 @@ button,input,select{font:inherit}button{cursor:pointer}
 
   <div class="section">
     <h2 class="title">今日の担当を選択</h2>
-    <p class="desc">複数人選択できます。選択後に「今日の担当を保存」を押してください。</p>
     <div id="assignmentGrid" class="grid"></div>
     <button id="btnSaveAssignments" class="btn primary" style="margin-top:12px">今日の担当を保存</button>
   </div>
@@ -85,30 +84,28 @@ button,input,select{font:inherit}button{cursor:pointer}
   </div>
 
   <div class="section">
-    <h2 class="title">ミス入力</h2>
+    <h2 class="title">入力</h2>
     <div class="field">
       <label>日付</label>
       <input id="inputDate" class="input" type="date">
     </div>
 
-    <h3 class="title" style="font-size:15px">ミスした選手</h3>
-    <p class="desc">今日の担当として登録した選手だけ表示されます。</p>
+    <h3 class="title" style="font-size:15px">選手</h3>
     <div id="mistakeGrid" class="grid"></div>
 
-    <h3 class="title" style="font-size:15px;margin-top:14px">ミスカテゴリー</h3>
+    <h3 class="title" style="font-size:15px;margin-top:14px">カテゴリー</h3>
     <div id="categoryGrid" class="grid"></div>
 
     <div class="summary" style="margin-top:12px">
-      <div class="row"><span class="key">ミスした選手</span><span id="summaryPlayer" class="val">-</span></div>
+      <div class="row"><span class="key">選手</span><span id="summaryPlayer" class="val">-</span></div>
       <div class="row"><span class="key">カテゴリー</span><span id="summaryCategory" class="val">-</span></div>
     </div>
 
-    <button id="btnSendMistake" class="btn primary" style="margin-top:10px">ミスを登録する</button>
+    <button id="btnSendMistake" class="btn primary" style="margin-top:10px">登録する</button>
   </div>
 
   <div class="section">
-    <h2 class="title">🔥 チーム連続成功</h2>
-    <p class="desc">担当チームを選び、チーム全体の連続成功回数を直接入力してください。</p>
+    <h2 class="title">🔥 連続成功回数</h2>
 
     <h3 class="title" style="font-size:15px">担当チーム</h3>
     <div id="teamGrid" class="grid">
@@ -134,7 +131,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 
 <section id="panelReport" class="panel">
   <div class="section">
-    <h2 class="title">📊 練習結果</h2>
+    <h2 class="title">📊 結果</h2>
     <div class="field"><label>表示する日付</label><input id="reportDate" class="input" type="date"></div>
     <button id="btnRefreshReport" class="btn secondary">集計を更新</button>
     <button id="btnSaveImage" class="btn primary" style="margin-top:9px">📸 一覧表を画像保存</button>
@@ -144,21 +141,21 @@ button,input,select{font:inherit}button{cursor:pointer}
     <div class="reportTitle">スクエア集計</div>
     <div id="reportImageDate" class="reportDate"></div>
 
-    <h3 class="title">ミス集計</h3>
+    <h3 class="title">集計</h3>
     <div class="tableWrap"><table id="mistakeSummaryTable" class="table"></table></div>
 
-    <h3 class="title" style="margin-top:14px">🔥 チーム連続成功</h3>
+    <h3 class="title" style="margin-top:14px">🔥 連続成功回数</h3>
     <div class="tableWrap"><table id="successSummaryTable" class="table"></table></div>
   </div>
 
   <div class="section" style="margin-top:12px">
     <h2 class="title">🗑️ 誤入力データの削除</h2>
 
-    <h3 class="title" style="font-size:15px">ミス入力</h3>
+    <h3 class="title" style="font-size:15px">データ一覧</h3>
     <div id="rawMistakeList" class="rawList"></div>
     <button id="btnDeleteMistakes" class="btn danger" style="margin-top:9px">選択したミス入力を削除</button>
 
-    <h3 class="title" style="font-size:15px;margin-top:16px">チーム連続成功</h3>
+    <h3 class="title" style="font-size:15px;margin-top:16px">チーム連続成功数</h3>
     <div id="rawSuccessList" class="rawList"></div>
     <button id="btnDeleteSuccesses" class="btn danger" style="margin-top:9px">選択した連続成功記録を削除</button>
   </div>
