@@ -22,7 +22,7 @@ button,input,select{font:inherit}button{cursor:pointer}
 .tab{border:0;min-height:52px;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:900}
 .tab.active{background:var(--yellow);color:var(--navy)}
 .panel{display:none;padding:14px}.panel.active{display:block}
-.section{border:1px solid var(--line);border-radius:19px;padding:14px;margin-bottom:11px;background:#fff}
+.section{border:1px solid var(--line);border-radius:19px;padding:14px;margin-bottom:11px;background:#fff;min-width: 0;overflow: hidden;}
 .title{margin:0 0 10px;color:var(--navy);font-size:17px;font-weight:900}
 .desc{margin:-3px 0 11px;color:var(--muted);font-size:12px;line-height:1.55}
 .current{padding:15px;border-radius:18px;background:var(--navy);color:#fff;margin-bottom:12px}
@@ -31,15 +31,62 @@ button,input,select{font:inherit}button{cursor:pointer}
 .playerBtn,.catBtn,.teamBtn{min-height:68px;border:2px solid var(--line);border-radius:17px;background:#fff;color:var(--navy);font-weight:900;padding:9px}
 .playerBtn.selected,.catBtn.selected,.teamBtn.selected{border-color:var(--navy);background:var(--yellow);box-shadow:0 4px 10px rgba(255,213,74,.3)}
 .sub{display:block;font-size:11px;opacity:.7;margin-top:4px}
-.input,.select{width:100%;max-width: 100%;min-width: 0;min-height:50px;border:1.5px solid var(--line);border-radius:15px;padding:12px;background:#fff;color:var(--text);font-size:16px;box-sizing:border-box;}
-input[type="date"] {
+.input,
+.select {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+
+  min-height: 50px;
+
+  border: 1.5px solid var(--line);
+  border-radius: 15px;
+
+  padding: 12px;
+
+  background: #fff;
+  color: var(--text);
+
+  font-size: 16px;
+
   box-sizing: border-box;
+}
+
+.dateWrap {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.dateInput {
+  display: block;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  margin: 0;
+
+  box-sizing: border-box;
+
   -webkit-appearance: none;
   appearance: none;
 }
+
+.dateInput::-webkit-date-and-time-value {
+  text-align: center;
+}
+
+.dateInput::-webkit-calendar-picker-indicator {
+  margin: 0;
+}
+
+.section {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.field label{font-size:12px;font-weight:900;color:var(--navy)}
 .btn{width:100%;min-height:50px;border:0;border-radius:15px;font-weight:900}
 .primary{background:var(--yellow);color:var(--navy)}.secondary{background:var(--navy);color:#fff}.ghost{background:#eef4ff;color:var(--navy)}.danger{background:#fdecec;color:var(--danger)}
@@ -95,7 +142,14 @@ input[type="date"] {
     <h2 class="title">入力</h2>
     <div class="field">
       <label>日付</label>
-      <input id="inputDate" class="input" type="date">
+    
+      <div class="dateWrap">
+        <input
+          id="inputDate"
+          class="input dateInput"
+          type="date"
+        >
+      </div>
     </div>
 
     <h3 class="title" style="font-size:15px">選手</h3>
@@ -140,7 +194,15 @@ input[type="date"] {
 <section id="panelReport" class="panel">
   <div class="section">
     <h2 class="title">📊 結果</h2>
-    <div class="field"><label>表示する日付</label><input id="reportDate" class="input" type="date"></div>
+    <div class="field"><label>表示する日付</label>
+      <div class="dateWrap">
+        <input
+          id="reportDate"
+          class="input dateInput"
+          type="date"
+        >
+      </div>
+    </div>
     <button id="btnRefreshReport" class="btn secondary">集計を更新</button>
     <button id="btnSaveImage" class="btn primary" style="margin-top:9px">📸 一覧表を画像保存</button>
   </div>
