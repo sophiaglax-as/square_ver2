@@ -1,4 +1,4 @@
-const SERVICE_URL = 'https://script.google.com/macros/s/AKfycbxX6c1WAWvY7dKWVtqfkKFdjxmN4iwSGUV8pqDXzr2DbALsD7jOx5QhZ2pnyDBHHvY/exec';
+const SERVICE_URL = 'https://script.google.com/macros/s/AKfycbyuNZo4UpOeO4VmOmUbzxfa_LabGynSGtyMNqXA_Kbcxb-VSW2lYiEXZce8rTAWM9Qu/exec';
 
 const CATEGORIES = [
   '右キャッチ','右パス','左キャッチ','左パス',
@@ -9,9 +9,11 @@ let allPlayers = [];
 let activePlayers = [];
 let assignedPlayers = [];
 let selectedAssignmentIds = new Set();
+
 let selectedMistakePlayerId = '';
 let selectedCategory = '';
-let teamSuccessCount = 0;
+
+let selectedTeam = '';
 
 const $ = id => document.getElementById(id);
 
@@ -21,6 +23,8 @@ async function init(){
   setToday();
   bindEvents();
   renderCategories();
+  renderTeamSelection();
+  renderSuccessSummary();
 
   try{
     await loadPlayers();
@@ -43,16 +47,15 @@ function bindEvents(){
   $('btnSaveAssignments').onclick=saveAssignments;
   $('btnSendMistake').onclick=sendMistake;
 
-  $('btnSuccessMinus').onclick=()=>{
-    teamSuccessCount=Math.max(0,teamSuccessCount-1);
-    renderSuccessCounter();
-  };
+  document.querySelectorAll('[data-team]').forEach(btn=>{
+    btn.onclick=()=>{
+      selectedTeam=btn.dataset.team;
+      renderTeamSelection();
+      renderSuccessSummary();
+    };
+  });
 
-  $('btnSuccessPlus').onclick=()=>{
-    teamSuccessCount++;
-    renderSuccessCounter();
-  };
-
+  $('successCountInput').addEventListener('input',renderSuccessSummary);
   $('btnSaveSuccess').onclick=saveSuccess;
 
   $('btnRefreshReport').onclick=loadReport;
@@ -82,7 +85,7 @@ function switchTab(tab){
   $('panelInput').classList.toggle('active',tab==='input');
   $('panelReport').classList.toggle('active',tab==='report');
 
-  if(tab==='report') loadReport();
+  if(tab==='report')loadReport();
 }
 
 async function apiGet(action,params={}){
@@ -94,8 +97,9 @@ async function apiGet(action,params={}){
   });
 
   const r=await fetch(url.toString());
-  const j=await r.json();
+  if(!r.ok)throw new Error(`通信に失敗しました (${r.status})`);
 
+  const j=await r.json();
   if(!j.ok)throw new Error(j.error||'APIエラー');
 
   return j;
@@ -108,8 +112,9 @@ async function apiPost(action,data={}){
     body:JSON.stringify({action,data})
   });
 
-  const j=await r.json();
+  if(!r.ok)throw new Error(`通信に失敗しました (${r.status})`);
 
+  const j=await r.json();
   if(!j.ok)throw new Error(j.error||'APIエラー');
 
   return j;
@@ -131,10 +136,14 @@ async function loadPlayers(){
 async function loadAssignments(){
   const date=$('inputDate').value;
   const j=await apiGet('getAssignmentsForDate',{date});
+
   assignedPlayers=Array.isArray(j.players)?j.players:[];
   selectedAssignmentIds=new Set(assignedPlayers.map(p=>p.playerId));
 
-  if(selectedMistakePlayerId&&!assignedPlayers.some(p=>p.playerId===selectedMistakePlayerId)){
+  if(
+    selectedMistakePlayerId &&
+    !assignedPlayers.some(p=>p.playerId===selectedMistakePlayerId)
+  ){
     selectedMistakePlayerId='';
   }
 }
@@ -145,11 +154,13 @@ function renderAll(){
   renderCategories();
   renderInputSummary();
   renderSettingsPlayers();
-  renderSuccessCounter();
+  renderTeamSelection();
+  renderSuccessSummary();
 }
 
 function renderAssignments(){
   const names=assignedPlayers.map(p=>p.name);
+
   $('assignedSummary').textContent=names.length?names.join('・'):'未登録';
   $('inputAssignedSummary').textContent=names.length?names.join('・'):'未登録';
 
@@ -160,26 +171,30 @@ function renderAssignments(){
 
   $('assignmentGrid').innerHTML=activePlayers.map(p=>`
     <button class="playerBtn ${selectedAssignmentIds.has(p.playerId)?'selected':''}" data-assignment="${esc(p.playerId)}">
-      ${esc(p.name)}<span class="sub">${esc(p.position||'')}</span>
+      ${esc(p.name)}
+      <span class="sub">${esc(p.position||'')}</span>
     </button>
   `).join('');
 
   $('assignmentGrid').querySelectorAll('[data-assignment]').forEach(btn=>{
     btn.onclick=()=>{
       const id=btn.dataset.assignment;
-      if(selectedAssignmentIds.has(id))selectedAssignmentIds.delete(id);
-      else selectedAssignmentIds.add(id);
+
+      if(selectedAssignmentIds.has(id)){
+        selectedAssignmentIds.delete(id);
+      }else{
+        selectedAssignmentIds.add(id);
+      }
+
       renderAssignments();
     };
   });
 }
 
 async function saveAssignments(){
-  const date=$('inputDate').value;
-
   try{
     await apiPost('setAssignmentsForDate',{
-      date,
+      date:$('inputDate').value,
       playerIds:[...selectedAssignmentIds]
     });
 
@@ -200,7 +215,8 @@ function renderMistakePlayers(){
 
   $('mistakeGrid').innerHTML=assignedPlayers.map(p=>`
     <button class="playerBtn ${p.playerId===selectedMistakePlayerId?'selected':''}" data-mistake="${esc(p.playerId)}">
-      ${esc(p.name)}<span class="sub">${esc(p.position||'')}</span>
+      ${esc(p.name)}
+      <span class="sub">${esc(p.position||'')}</span>
     </button>
   `).join('');
 
@@ -232,8 +248,21 @@ function renderInputSummary(){
   $('summaryCategory').textContent=selectedCategory||'-';
 }
 
-function renderSuccessCounter(){
-  $('successValue').textContent=`${teamSuccessCount}回`;
+function renderTeamSelection(){
+  document.querySelectorAll('[data-team]').forEach(btn=>{
+    btn.classList.toggle('selected',btn.dataset.team===selectedTeam);
+  });
+}
+
+function renderSuccessSummary(){
+  $('summaryTeam').textContent=selectedTeam||'-';
+
+  const count=Number($('successCountInput').value);
+
+  $('summarySuccessCount').textContent=
+    Number.isInteger(count)&&count>0
+      ? `${count}回`
+      : '-';
 }
 
 function playerName(id){
@@ -241,15 +270,21 @@ function playerName(id){
 }
 
 async function sendMistake(){
-  const date=$('inputDate').value;
+  if(!assignedPlayers.length){
+    return showMsg('先に今日の担当を登録してください。','err');
+  }
 
-  if(!assignedPlayers.length)return showMsg('先に今日の担当を登録してください。','err');
-  if(!selectedMistakePlayerId)return showMsg('ミスした選手を選択してください。','err');
-  if(!selectedCategory)return showMsg('ミスカテゴリーを選択してください。','err');
+  if(!selectedMistakePlayerId){
+    return showMsg('ミスした選手を選択してください。','err');
+  }
+
+  if(!selectedCategory){
+    return showMsg('ミスカテゴリーを選択してください。','err');
+  }
 
   try{
     await apiPost('addMistake',{
-      date,
+      date:$('inputDate').value,
       playerId:selectedMistakePlayerId,
       category:selectedCategory
     });
@@ -268,17 +303,35 @@ async function sendMistake(){
 }
 
 async function saveSuccess(){
-  if(teamSuccessCount<=0)return showMsg('1回以上にしてください。','err');
+  const date=$('inputDate').value;
+  const successCount=Number($('successCountInput').value);
+
+  if(!date){
+    return showMsg('日付を入力してください。','err');
+  }
+
+  if(!selectedTeam){
+    return showMsg('担当チームを選択してください。','err');
+  }
+
+  if(!Number.isInteger(successCount)||successCount<=0){
+    return showMsg('連続成功回数を1以上の整数で入力してください。','err');
+  }
 
   try{
     await apiPost('addTeamSuccess',{
-      date:$('inputDate').value,
-      successCount:teamSuccessCount
+      date,
+      team:selectedTeam,
+      successCount
     });
 
-    showMsg(`チーム連続成功 ${teamSuccessCount}回 を記録しました。`,'ok');
-    teamSuccessCount=0;
-    renderSuccessCounter();
+    showMsg(`${selectedTeam}：連続成功 ${successCount}回 を記録しました。`,'ok');
+
+    selectedTeam='';
+    $('successCountInput').value='';
+
+    renderTeamSelection();
+    renderSuccessSummary();
   }catch(e){
     showMsg(e.message||String(e),'err');
   }
@@ -286,6 +339,9 @@ async function saveSuccess(){
 
 async function loadReport(){
   const date=$('reportDate').value;
+
+  if(!date)return;
+
   $('reportImageDate').textContent=date.replaceAll('-','/');
 
   try{
@@ -316,14 +372,24 @@ function renderMistakeSummary(summary){
   const cats=CATEGORIES.filter(c=>summary.some(row=>(row.categories?.[c]||0)>0));
 
   table.innerHTML=`
-    <thead><tr><th class="left">選手</th>${cats.map(c=>`<th>${esc(c)}</th>`).join('')}<th>合計</th></tr></thead>
-    <tbody>${summary.map(row=>`
+    <thead>
       <tr>
-        <td class="left">${esc(row.name)}</td>
-        ${cats.map(c=>`<td>${row.categories?.[c]||0}</td>`).join('')}
-        <td><strong>${row.total||0}</strong></td>
+        <th class="left">選手</th>
+        ${cats.map(c=>`<th>${esc(c)}</th>`).join('')}
+        <th>合計</th>
       </tr>
-    `).join('')}</tbody>`;
+    </thead>
+
+    <tbody>
+      ${summary.map(row=>`
+        <tr>
+          <td class="left">${esc(row.name)}</td>
+          ${cats.map(c=>`<td>${row.categories?.[c]||0}</td>`).join('')}
+          <td><strong>${row.total||0}</strong></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  `;
 }
 
 function renderSuccessTop(rows){
@@ -335,69 +401,125 @@ function renderSuccessTop(rows){
   }
 
   el.innerHTML=rows.slice(0,10).map((r,i)=>`
-    <div class="topItem"><span>トップ${i+1}</span><span class="topValue">${r.successCount}回</span></div>
+    <div class="topItem">
+      <span>トップ${i+1}</span>
+      <span class="topTeam">${esc(r.team||'-')}</span>
+      <span class="topValue">${r.successCount}回</span>
+    </div>
   `).join('');
 }
 
 function renderRawMistakes(rows){
   const el=$('rawMistakeList');
+
   el.innerHTML=rows.length?rows.map(r=>`
     <label class="rawItem">
       <input type="checkbox" data-mistake-id="${esc(r.recordId)}">
-      <div><strong>${esc(r.playerName)} / ${esc(r.category)}</strong><div class="sub">${esc(formatTime(r.timestamp))}</div></div>
+      <div>
+        <strong>${esc(r.playerName)} / ${esc(r.category)}</strong>
+        <div class="sub">${esc(formatTime(r.timestamp))}</div>
+      </div>
     </label>
   `).join(''):'<div class="empty">ミス入力なし</div>';
 }
 
 function renderRawSuccesses(rows){
   const el=$('rawSuccessList');
+
   el.innerHTML=rows.length?rows.map(r=>`
     <label class="rawItem">
       <input type="checkbox" data-success-id="${esc(r.recordId)}">
-      <div><strong>${r.successCount}回</strong><div class="sub">${esc(formatTime(r.timestamp))}</div></div>
+      <div>
+        <strong>${esc(r.team||'-')} / ${r.successCount}回</strong>
+        <div class="sub">${esc(formatTime(r.timestamp))}</div>
+      </div>
     </label>
   `).join(''):'<div class="empty">連続成功記録なし</div>';
 }
 
 async function deleteSelectedMistakes(){
   const ids=[...document.querySelectorAll('[data-mistake-id]:checked')].map(x=>x.dataset.mistakeId);
-  if(!ids.length)return showMsg('削除するミス入力を選択してください。','err');
+
+  if(!ids.length){
+    return showMsg('削除するミス入力を選択してください。','err');
+  }
+
   if(!confirm(`${ids.length}件削除しますか？`))return;
 
-  await apiPost('deleteMistakesById',{recordIds:ids});
-  await loadReport();
+  try{
+    await apiPost('deleteMistakesById',{recordIds:ids});
+    await loadReport();
+    showMsg(`${ids.length}件削除しました。`,'ok');
+  }catch(e){
+    showMsg(e.message||String(e),'err');
+  }
 }
 
 async function deleteSelectedSuccesses(){
   const ids=[...document.querySelectorAll('[data-success-id]:checked')].map(x=>x.dataset.successId);
-  if(!ids.length)return showMsg('削除する連続成功記録を選択してください。','err');
+
+  if(!ids.length){
+    return showMsg('削除する連続成功記録を選択してください。','err');
+  }
+
   if(!confirm(`${ids.length}件削除しますか？`))return;
 
-  await apiPost('deleteTeamSuccessesById',{recordIds:ids});
-  await loadReport();
+  try{
+    await apiPost('deleteTeamSuccessesById',{recordIds:ids});
+    await loadReport();
+    showMsg(`${ids.length}件削除しました。`,'ok');
+  }catch(e){
+    showMsg(e.message||String(e),'err');
+  }
 }
 
 async function saveReportImage(){
-  const canvas=await html2canvas($('reportCanvas'),{backgroundColor:'#fff',scale:2,useCORS:true});
+  try{
+    const canvas=await html2canvas(
+      $('reportCanvas'),
+      {
+        backgroundColor:'#fff',
+        scale:2,
+        useCORS:true
+      }
+    );
 
-  canvas.toBlob(async blob=>{
-    const filename=`square_${$('reportDate').value}.png`;
-    const file=new File([blob],filename,{type:'image/png'});
+    canvas.toBlob(async blob=>{
+      if(!blob)return;
 
-    if(navigator.share&&navigator.canShare?.({files:[file]})){
-      try{
-        await navigator.share({title:'スクエア集計',files:[file]});
-        return;
-      }catch(e){}
-    }
+      const filename=`square_${$('reportDate').value}.png`;
+      const file=new File([blob],filename,{type:'image/png'});
 
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download=filename;
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-  },'image/png');
+      if(
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({files:[file]})
+      ){
+        try{
+          await navigator.share({
+            title:'スクエア集計',
+            files:[file]
+          });
+          return;
+        }catch(e){}
+      }
+
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+
+      a.href=url;
+      a.download=filename;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    },'image/png');
+
+  }catch(e){
+    showMsg('画像の作成に失敗しました。','err');
+  }
 }
 
 function openSettings(){
@@ -419,23 +541,38 @@ function renderSettingsPlayers(){
 
   el.innerHTML=allPlayers.map(p=>{
     const on=p.status==='active';
+
     return `
       <div class="settingCard">
-        <strong>${esc(p.name)}</strong> <span class="sub">${esc(p.position||'')}</span>
+        <strong>${esc(p.name)}</strong>
+        <span class="sub">${esc(p.position||'')}</span>
         <span class="badge ${on?'active':'hidden'}">${on?'表示中':'非表示'}</span>
-        <button class="smallBtn ${on?'danger':'secondary'}" style="margin-top:8px" data-toggle="${esc(p.playerId)}" data-next="${on?'hidden':'active'}">
+
+        <button
+          class="smallBtn ${on?'danger':'secondary'}"
+          style="margin-top:8px"
+          data-toggle="${esc(p.playerId)}"
+          data-next="${on?'hidden':'active'}"
+        >
           ${on?'非表示にする':'表示状態に戻す'}
         </button>
-      </div>`;
+      </div>
+    `;
   }).join('');
 
   el.querySelectorAll('[data-toggle]').forEach(btn=>{
     btn.onclick=async()=>{
       try{
-        await apiPost('updatePlayerStatus',{playerId:btn.dataset.toggle,status:btn.dataset.next});
+        await apiPost('updatePlayerStatus',{
+          playerId:btn.dataset.toggle,
+          status:btn.dataset.next
+        });
+
         await loadPlayers();
         await loadAssignments();
         renderAll();
+
+        showMsg('選手の表示状態を更新しました。','ok');
       }catch(e){
         showMsg(e.message||String(e),'err');
       }
@@ -447,10 +584,13 @@ async function addPlayer(){
   const name=$('newPlayerName').value.trim();
   const position=$('newPlayerPosition').value;
 
-  if(!name||!position)return showMsg('選手名とポジションを入力してください。','err');
+  if(!name||!position){
+    return showMsg('選手名とポジションを入力してください。','err');
+  }
 
   try{
     await apiPost('addPlayer',{name,position});
+
     $('newPlayerName').value='';
     $('newPlayerPosition').value='';
 
@@ -466,7 +606,16 @@ async function addPlayer(){
 
 function formatTime(v){
   const d=new Date(v);
-  return isNaN(d.getTime())?String(v||''):d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+
+  return isNaN(d.getTime())
+    ? String(v||'')
+    : d.toLocaleTimeString(
+        'ja-JP',
+        {
+          hour:'2-digit',
+          minute:'2-digit'
+        }
+      );
 }
 
 function esc(v){
