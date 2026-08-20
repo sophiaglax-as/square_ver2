@@ -102,6 +102,172 @@ button,input,select{font:inherit}button{cursor:pointer}
 .smallBtn{border:0;border-radius:12px;padding:9px 11px;font-weight:900}.empty{text-align:center;padding:18px;color:var(--muted);font-size:13px}
 .hiddenEl{display:none!important}
 @media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+/* =========================================================
+   スマホ操作改善 v8
+   ========================================================= */
+
+/* タップした瞬間に「押せた」ことが分かる */
+.btn,
+.playerBtn,
+.catBtn,
+.teamBtn,
+.smallBtn,
+.gear,
+.tab {
+  transition:
+    opacity .14s ease,
+    transform .08s ease,
+    filter .14s ease;
+  touch-action: manipulation;
+}
+
+.btn:active,
+.playerBtn:active,
+.catBtn:active,
+.teamBtn:active,
+.smallBtn:active,
+.gear:active,
+.tab:active {
+  opacity: .55;
+  transform: scale(.98);
+}
+
+/* 通信中は薄くして連打不可を明確にする */
+.btn:disabled,
+.smallBtn:disabled,
+.gear:disabled {
+  opacity: .42;
+  filter: grayscale(.12);
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 通信中ボタン */
+.btn.isLoading,
+.smallBtn.isLoading {
+  opacity: .55;
+}
+
+/* スマホでは横スクロールを出さず、表全体を画面内に収める */
+@media (max-width: 639px) {
+  .tableWrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .table {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    table-layout: fixed;
+    font-size: 9px;
+  }
+
+  .table th,
+  .table td {
+    padding: 5px 2px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  /* 選手名列だけ少し広め */
+  #mistakeSummaryTable th:first-child,
+  #mistakeSummaryTable td:first-child {
+    width: 58px;
+  }
+
+  /* 合計列 */
+  #mistakeSummaryTable th:last-child,
+  #mistakeSummaryTable td:last-child {
+    width: 34px;
+  }
+
+  /* 項目数が多いので、見出しは縦書きにして幅を節約 */
+  #mistakeSummaryTable thead th:not(:first-child):not(:last-child) {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    height: 86px;
+    padding: 5px 1px;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  #mistakeSummaryTable tbody td:not(:first-child) {
+    font-size: 10px;
+  }
+
+  /* 連続成功表は普通に読みやすく */
+  #successSummaryTable {
+    font-size: 12px;
+  }
+
+  #successSummaryTable th,
+  #successSummaryTable td {
+    padding: 9px 5px;
+  }
+
+  .reportCard {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+  }
+}
+
+/* 画像保存時だけ横幅を広げ、全項目を高解像度で1枚に収める */
+.reportCard.exportMode {
+  width: 1100px !important;
+  max-width: none !important;
+  padding: 24px !important;
+  overflow: visible !important;
+}
+
+.reportCard.exportMode .tableWrap {
+  width: 100% !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+.reportCard.exportMode .table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  table-layout: fixed !important;
+  font-size: 14px !important;
+}
+
+.reportCard.exportMode .table th,
+.reportCard.exportMode .table td {
+  padding: 10px 6px !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  height: auto !important;
+  font-size: 14px !important;
+}
+
+.reportCard.exportMode #mistakeSummaryTable th:first-child,
+.reportCard.exportMode #mistakeSummaryTable td:first-child {
+  width: 120px !important;
+}
+
+.reportCard.exportMode #mistakeSummaryTable th:last-child,
+.reportCard.exportMode #mistakeSummaryTable td:last-child {
+  width: 70px !important;
+}
+
+.reportCard.exportMode .reportTitle {
+  font-size: 24px !important;
+}
+
+.reportCard.exportMode .title {
+  font-size: 18px !important;
+}
+
 </style>
 </head>
 <body>

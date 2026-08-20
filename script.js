@@ -191,7 +191,39 @@ function renderAssignments(){
   });
 }
 
+
+function setButtonBusy(button, busy, busyText){
+  if(!button)return;
+
+  if(busy){
+    if(!button.dataset.originalText){
+      button.dataset.originalText=button.textContent;
+    }
+
+    button.disabled=true;
+    button.classList.add('isLoading');
+
+    if(busyText){
+      button.textContent=busyText;
+    }
+  }else{
+    button.disabled=false;
+    button.classList.remove('isLoading');
+
+    if(button.dataset.originalText){
+      button.textContent=button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
+  }
+}
+
 async function saveAssignments(){
+  const btn=$('btnSaveAssignments');
+
+  if(btn.disabled)return;
+
+  setButtonBusy(btn,true,'保存中…');
+
   try{
     await apiPost('setAssignmentsForDate',{
       date:$('inputDate').value,
@@ -204,6 +236,8 @@ async function saveAssignments(){
     showMsg('今日の担当を保存しました。','ok');
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
@@ -216,7 +250,6 @@ function renderMistakePlayers(){
   $('mistakeGrid').innerHTML=assignedPlayers.map(p=>`
     <button class="playerBtn ${p.playerId===selectedMistakePlayerId?'selected':''}" data-mistake="${esc(p.playerId)}">
       ${esc(p.name)}
-      <span class="sub">${esc(p.position||'')}</span>
     </button>
   `).join('');
 
@@ -270,6 +303,10 @@ function playerName(id){
 }
 
 async function sendMistake(){
+  const btn=$('btnSendMistake');
+
+  if(btn.disabled)return;
+
   if(!assignedPlayers.length){
     return showMsg('先に今日の担当を登録してください。','err');
   }
@@ -282,14 +319,17 @@ async function sendMistake(){
     return showMsg('ミスカテゴリーを選択してください。','err');
   }
 
+  setButtonBusy(btn,true,'登録中…');
+
   try{
+    const registeredPlayerName=playerName(selectedMistakePlayerId);
+    const registeredCategory=selectedCategory;
+
     await apiPost('addMistake',{
       date:$('inputDate').value,
       playerId:selectedMistakePlayerId,
       category:selectedCategory
     });
-
-    showMsg(`登録しました：${playerName(selectedMistakePlayerId)} / ${selectedCategory}`,'ok');
 
     selectedMistakePlayerId='';
     selectedCategory='';
@@ -297,12 +337,23 @@ async function sendMistake(){
     renderMistakePlayers();
     renderCategories();
     renderInputSummary();
+
+    showMsg(
+      `登録しました：${registeredPlayerName} / ${registeredCategory}`,
+      'ok'
+    );
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
 async function saveSuccess(){
+  const btn=$('btnSaveSuccess');
+
+  if(btn.disabled)return;
+
   const date=$('inputDate').value;
   const successCount=Number($('successCountInput').value);
 
@@ -318,31 +369,44 @@ async function saveSuccess(){
     return showMsg('連続成功回数を1以上の整数で入力してください。','err');
   }
 
+  setButtonBusy(btn,true,'保存中…');
+
   try{
+    const team=selectedTeam;
+
     await apiPost('addTeamSuccess',{
       date,
-      team:selectedTeam,
+      team,
       successCount
     });
-
-    showMsg(`${selectedTeam}：連続成功 ${successCount}回 を記録しました。`,'ok');
 
     selectedTeam='';
     $('successCountInput').value='';
 
     renderTeamSelection();
     renderSuccessSummary();
+
+    showMsg(
+      `${team}：連続成功 ${successCount}回 を記録しました。`,
+      'ok'
+    );
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
 async function loadReport(){
   const date=$('reportDate').value;
+  const btn=$('btnRefreshReport');
 
   if(!date)return;
+  if(btn.disabled)return;
 
   $('reportImageDate').textContent=date.replaceAll('-','/');
+
+  setButtonBusy(btn,true,'更新中…');
 
   try{
     const [m,s,rm,rs]=await Promise.all([
@@ -358,6 +422,8 @@ async function loadReport(){
     renderRawSuccesses(rs.rows||[]);
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
@@ -484,7 +550,10 @@ function renderRawSuccesses(rows){
 }
 
 async function deleteSelectedMistakes(){
+  const btn=$('btnDeleteMistakes');
   const ids=[...document.querySelectorAll('[data-mistake-id]:checked')].map(x=>x.dataset.mistakeId);
+
+  if(btn.disabled)return;
 
   if(!ids.length){
     return showMsg('削除するミス入力を選択してください。','err');
@@ -492,17 +561,24 @@ async function deleteSelectedMistakes(){
 
   if(!confirm(`${ids.length}件削除しますか？`))return;
 
+  setButtonBusy(btn,true,'削除中…');
+
   try{
     await apiPost('deleteMistakesById',{recordIds:ids});
     await loadReport();
     showMsg(`${ids.length}件削除しました。`,'ok');
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
 async function deleteSelectedSuccesses(){
+  const btn=$('btnDeleteSuccesses');
   const ids=[...document.querySelectorAll('[data-success-id]:checked')].map(x=>x.dataset.successId);
+
+  if(btn.disabled)return;
 
   if(!ids.length){
     return showMsg('削除する連続成功記録を選択してください。','err');
@@ -510,28 +586,53 @@ async function deleteSelectedSuccesses(){
 
   if(!confirm(`${ids.length}件削除しますか？`))return;
 
+  setButtonBusy(btn,true,'削除中…');
+
   try{
     await apiPost('deleteTeamSuccessesById',{recordIds:ids});
     await loadReport();
     showMsg(`${ids.length}件削除しました。`,'ok');
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
 async function saveReportImage(){
+  const btn=$('btnSaveImage');
+  const target=$('reportCanvas');
+
+  if(btn.disabled)return;
+
+  setButtonBusy(btn,true,'画像作成中…');
+  target.classList.add('exportMode');
+
   try{
+    // exportMode のCSS反映を待つ
+    await new Promise(resolve=>requestAnimationFrame(()=>{
+      requestAnimationFrame(resolve);
+    }));
+
     const canvas=await html2canvas(
-      $('reportCanvas'),
+      target,
       {
         backgroundColor:'#fff',
         scale:2,
-        useCORS:true
+        useCORS:true,
+        windowWidth:1200,
+        scrollX:0,
+        scrollY:0
       }
     );
 
+    target.classList.remove('exportMode');
+
     canvas.toBlob(async blob=>{
-      if(!blob)return;
+      if(!blob){
+        setButtonBusy(btn,false);
+        return showMsg('画像の作成に失敗しました。','err');
+      }
 
       const filename=`square_${$('reportDate').value}.png`;
       const file=new File([blob],filename,{type:'image/png'});
@@ -546,8 +647,11 @@ async function saveReportImage(){
             title:'スクエア集計',
             files:[file]
           });
+          setButtonBusy(btn,false);
           return;
-        }catch(e){}
+        }catch(e){
+          // 共有を閉じた場合はダウンロードへ進む
+        }
       }
 
       const url=URL.createObjectURL(blob);
@@ -561,9 +665,12 @@ async function saveReportImage(){
       a.remove();
 
       setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setButtonBusy(btn,false);
     },'image/png');
 
   }catch(e){
+    target.classList.remove('exportMode');
+    setButtonBusy(btn,false);
     showMsg('画像の作成に失敗しました。','err');
   }
 }
@@ -608,6 +715,10 @@ function renderSettingsPlayers(){
 
   el.querySelectorAll('[data-toggle]').forEach(btn=>{
     btn.onclick=async()=>{
+      if(btn.disabled)return;
+
+      setButtonBusy(btn,true,'更新中…');
+
       try{
         await apiPost('updatePlayerStatus',{
           playerId:btn.dataset.toggle,
@@ -621,18 +732,25 @@ function renderSettingsPlayers(){
         showMsg('選手の表示状態を更新しました。','ok');
       }catch(e){
         showMsg(e.message||String(e),'err');
+      }finally{
+        setButtonBusy(btn,false);
       }
     };
   });
 }
 
 async function addPlayer(){
+  const btn=$('btnAddPlayer');
   const name=$('newPlayerName').value.trim();
   const position=$('newPlayerPosition').value;
+
+  if(btn.disabled)return;
 
   if(!name||!position){
     return showMsg('選手名とポジションを入力してください。','err');
   }
+
+  setButtonBusy(btn,true,'登録中…');
 
   try{
     await apiPost('addPlayer',{name,position});
@@ -647,6 +765,8 @@ async function addPlayer(){
     showMsg('選手を登録しました。','ok');
   }catch(e){
     showMsg(e.message||String(e),'err');
+  }finally{
+    setButtonBusy(btn,false);
   }
 }
 
